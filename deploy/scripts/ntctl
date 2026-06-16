@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# ntctl — operator convenience wrapper around `podman exec nesttalk-cli nesttalk-cli <subcommand>`.
+#
+# Usage:
+#   ntctl <subcommand> [args...]
+#
+# Examples:
+#   ntctl enroll alice
+#   ntctl list-users
+#   ntctl revoke <user_id>
+#   ntctl backup-to --to /var/backup/nesttalk-$(date -u +%Y-%m-%d).db
+#   ntctl restore-from --from /var/backup/nesttalk-2026-04-16.db
+#   ntctl vacuum
+#   ntctl emergency-shell
+#
+# All subcommands and arguments are forwarded verbatim to the nesttalk-cli
+# binary inside the container. Run `ntctl --help` (or any subcommand with
+# --help) for full usage.
+#
+# Environment:
+#   NESTTALK_CLI_CONTAINER  — override the container name
+#                             (default: nesttalk-cli)
+#
+# See ADMIN_GUIDE.md for the full operator runbook.
+
+set -euo pipefail
+
+CONTAINER="${NESTTALK_CLI_CONTAINER:-nesttalk-cli}"
+BINARY="nesttalk-cli"
+
+# Print usage when invoked with no arguments.
+if [[ $# -eq 0 ]]; then
+  cat >&2 <<EOF
+Usage: ntctl <subcommand> [args...]
+
+ntctl is a convenience wrapper that runs:
+  podman exec ${CONTAINER} ${BINARY} <subcommand> [args...]
+
+Common subcommands:
+  enroll <name>             Issue a new enrollment link
+  enroll-existing           Re-enroll an existing user
+  list-users                List all users
+  revoke <user_id>          Revoke a user
+  revoke-device <device_id> Revoke a specific device
+  list-enrollment-links     List outstanding enrollment links
+  reconcile-device          Look up a device by public key
+  reload-config             Tell the server to reload its config
+  backup-to --to <path>     Take an online SQLite snapshot
+  restore-from --from <path> DESTRUCTIVE: replace the live DB with a backup
+  list-recent-calls         List recent calls (paginated)
+  vacuum                    Run SQLite VACUUM (run backup-to first!)
+  emergency-shell           DANGER: open sqlite3 shell directly against live DB
+
+Run 'ntctl <subcommand> --help' for subcommand-specific usage.
+
+See ADMIN_GUIDE.md for the full operator runbook.
+EOF
+  exit 1
+fi
+
+if ! command -v podman >/dev/null 2>&1; then
+  echo "ntctl: podman is required but was not found in PATH" >&2
+  exit 127
+fi
+
+exec podman exec "${CONTAINER}" "${BINARY}" "$@"

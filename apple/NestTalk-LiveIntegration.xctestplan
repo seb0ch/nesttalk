@@ -1,0 +1,37 @@
+{
+  "configurations" : [
+    {
+      "id" : "9C8B0F0E-8E1B-4F5B-8C7E-LIVEINTEG0001",
+      "name" : "Live integration",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "environmentVariableEntries" : [
+      {
+        "key" : "NESTTALK_LIVE_SERVER",
+        "value" : "1"
+      }
+    ],
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:NestTalk.xcodeproj",
+      "identifier" : "NestTalkTests_macOS",
+      "name" : "NestTalkTests_macOS"
+    }
+  },
+  "testTargets" : [
+    {
+      "selectedTests" : [
+        "LiveSpikeServerTests"
+      ],
+      "target" : {
+        "containerPath" : "container:NestTalk.xcodeproj",
+        "identifier" : "NestTalkTests_macOS",
+        "name" : "NestTalkTests_macOS"
+      }
+    }
+  ],
+  "version" : 1
+}

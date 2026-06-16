@@ -1,0 +1,6 @@
+# The server and CLI container builds only copy files from server/.
+# Keep the root build context tight so Podman on small hosts does not have to
+# archive the entire client tree.
+*
+!server/
+!server/**

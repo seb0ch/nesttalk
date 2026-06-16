@@ -1,0 +1,68 @@
+{
+  "log": {
+    "level": "info",
+    "output": "stderr"
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "0.0.0.0",
+      "listen_port": 443,
+      "users": [
+        {
+          "name": "api@nesttalk",
+          "uuid": "${REALITY_API_UUID}",
+          "flow": "xtls-rprx-vision"
+        },
+        {
+          "name": "turn@nesttalk",
+          "uuid": "${REALITY_TURN_UUID}",
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "${REALITY_SNI}",
+        "reality": {
+          "enabled": true,
+          "private_key": "${REALITY_PRIVATE_KEY}",
+          "short_id": ["${REALITY_SHORT_ID}"],
+          "handshake": {
+            "server": "${REALITY_DEST_HOST}",
+            "server_port": ${REALITY_DEST_PORT}
+          },
+          "max_time_difference": "1m"
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "nesttalk-api"
+    },
+    {
+      "type": "direct",
+      "tag": "coturn"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "auth_user": ["api@nesttalk"],
+        "action": "route",
+        "outbound": "nesttalk-api",
+        "override_address": "${API_REDIRECT_HOST}",
+        "override_port": ${API_REDIRECT_PORT}
+      },
+      {
+        "auth_user": ["turn@nesttalk"],
+        "action": "route",
+        "outbound": "coturn",
+        "override_address": "127.0.0.1",
+        "override_port": 3478
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+# Build sing-box from source with REALITY (server) + uTLS (client) support.
+#
+# Pin policy (Slice 0a, 2026-04-17):
+# - SING_BOX_COMMIT defaults to the same upstream commit baked into the
+#   inherited iOS libbox xcframework
+#   (client/ios/scripts/build_libbox.sh: SING_BOX_COMMIT). Keeping a single
+#   commit across server and client guarantees REALITY + VLESS protocol
+#   parity for v0.2.0.
+# - Bumping to a newer tag is treated as Slice 0b extra work and must be
+#   recorded explicitly in the slice notes.
+#
+# Build flags (Slice 0a, POC finding):
+# - The `-tags with_utls` build tag is required for REALITY client mode.
+#   The macOS helper consumes the same tag set; the server inbound only
+#   needs REALITY itself, but we keep the tag identical to share a single
+#   binary and stay close to the iOS embedded path.
+
+ARG SING_BOX_COMMIT=7d24f54bdd11d36219e71f99b937201f0a4eef16
+ARG GO_TAGS=with_utls,with_quic,with_grpc,with_dhcp,with_wireguard,with_acme,with_clash_api
+
+FROM docker.io/library/golang:1.26.1-alpine3.23 AS builder
+
+ARG SING_BOX_COMMIT
+ARG GO_TAGS
+RUN apk add --no-cache git
+
+WORKDIR /src
+RUN git clone https://github.com/SagerNet/sing-box.git . \
+    && git checkout --detach ${SING_BOX_COMMIT}
+
+RUN GOCACHE=/tmp/go-build-cache CGO_ENABLED=0 \
+    go build -p=1 -trimpath -ldflags "-s -w" \
+    -tags "${GO_TAGS}" \
+    -o /sing-box ./cmd/sing-box \
+    && rm -rf /tmp/go-build-cache /root/.cache/go-build /go/pkg/mod/cache
+
+# Runtime
+FROM docker.io/library/alpine:3.23
+
+RUN apk add --no-cache ca-certificates gettext
+COPY --from=builder /sing-box /usr/local/bin/sing-box
+COPY entrypoint-singbox.sh /usr/local/bin/entrypoint-singbox.sh
+
+RUN mkdir -p /etc/sing-box
+COPY singbox-server.json.tmpl /etc/sing-box/config.json.tmpl
+RUN chmod +x /usr/local/bin/entrypoint-singbox.sh
+
+EXPOSE 443
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-singbox.sh"]

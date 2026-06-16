@@ -1,0 +1,11 @@
+apple_id ENV["FASTLANE_APPLE_ID"] || "mrseboch@gmail.com"
+team_id "Q2GZ8F5NV5"
+
+# Distinct app identifiers for the iOS and macOS targets.
+for_platform :ios do
+  app_identifier "com.nesttalk.ios"
+end
+
+for_platform :mac do
+  app_identifier "com.nesttalk.macos"
+end

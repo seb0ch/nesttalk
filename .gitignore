@@ -1,0 +1,50 @@
+.DS_Store
+
+# Secrets and rendered deploy artifacts
+deploy/.env
+deploy/.env.local
+deploy/pod.rendered.yaml
+deploy/*.pem
+deploy/*.key
+
+# Local databases and runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Go build outputs
+server/bin/
+
+# Flutter/Dart build outputs
+client/.dart_tool/
+client/build/
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+client/.packages
+
+# CocoaPods generated dependencies
+client/ios/Pods/
+client/ios/ThirdParty/Libbox.xcframework/
+client/ios/ThirdParty/libbox-version.txt
+client/macos/Pods/
+client/macos/Flutter/ephemeral/
+client/macos/bin/xray
+client/macos/bin/sing-box
+
+# Local superpowers/worktree state — not for the v0.2.0 baseline.
+.superpowers/
+.worktrees/
+.claude/
+
+# stray local go build output
+server/nesttalk-server
+
+# APNs auth key — supplied as a podman secret, never committed
+deploy/*.p8
+deploy/.apns.p8
+
+# Internal design/spec docs — excluded from the public release
+docs/
+
+# Feasibility-spike code — excluded from the public release
+spikes/

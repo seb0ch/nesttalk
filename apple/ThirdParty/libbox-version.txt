@@ -1,0 +1,13 @@
+sing-box=7d24f54bdd11d36219e71f99b937201f0a4eef16
+golang-x-mobile=v0.0.0-20260410095206-2cfb76559b7b
+gomobile-flags=-tags "with_utls" -ldflags="-s -w"
+platform=ios,iossimulator,macos
+rebuilt-at=2026-04-24T19:22:00Z
+rebuilt-reason=v0.2.3 xcframework had only iOS slices (no macOS) and used macOS-style versioned bundle layout inside iOS slices, which is incompatible with shallow iOS bundles in bare SwiftUI/SPM projects. Rebuild produces flat iOS layout + macOS slice.
+rebuild-steps=|
+  git clone --depth 50 https://github.com/SagerNet/sing-box.git
+  git fetch --depth 1 origin 7d24f54bdd11d36219e71f99b937201f0a4eef16
+  git checkout 7d24f54bdd11d36219e71f99b937201f0a4eef16
+  go install golang.org/x/mobile/cmd/gomobile golang.org/x/mobile/cmd/gobind
+  go get golang.org/x/mobile/bind
+  gomobile bind -target=ios,iossimulator,macos -tags "with_utls" -ldflags="-s -w" -o Libbox.xcframework ./experimental/libbox

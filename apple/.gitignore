@@ -1,0 +1,31 @@
+NestTalk.xcodeproj/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+
+# Package.resolved IS tracked — but the file Xcode writes lives inside
+# the generated NestTalk.xcodeproj (covered by line 1 above), so the
+# in-project copy is implicitly ignored. The committed copy lives at
+# apple/Package.resolved.checked-in, restored into the generated project
+# by scripts/restore-package-resolved.sh before xcodebuild.
+*.ipa
+*.app
+*.dSYM
+*.dSYM.zip
+*.profraw
+*.profdata
+fastlane/ASC-API-Key.json
+fastlane/report.xml
+fastlane/test_output/
+build/
+
+# Libbox binary artifact is not committed (~468MB).
+# It's rebuilt from the pinned upstream commits in ThirdParty/libbox-version.txt
+# via gomobile bind. During the v0.4.0 spike (Day 1), a scripts/build-libbox.sh
+# will be written that regenerates ThirdParty/Libbox.xcframework from source.
+ThirdParty/Libbox.xcframework/
+
+# Build-time generated git-hash stamp (see project.yml preBuildScripts)
+NestTalk/Generated/

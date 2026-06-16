@@ -1,0 +1,31 @@
+# Build coturn from source
+# Base: Alpine 3.23
+# Pin to a specific release tag
+
+ARG COTURN_VERSION=4.9.0
+
+FROM docker.io/library/alpine:3.23 AS builder
+
+ARG COTURN_VERSION
+RUN apk add --no-cache build-base git libevent-dev linux-headers openssl-dev sqlite-dev
+
+WORKDIR /src
+RUN git clone --depth 1 --branch ${COTURN_VERSION} https://github.com/coturn/coturn.git .
+RUN ./configure --prefix=/usr/local
+RUN make -j$(nproc) && make install
+
+# Runtime
+FROM docker.io/library/alpine:3.23
+
+RUN apk add --no-cache gettext libevent openssl sqlite-libs
+COPY --from=builder /usr/local/bin/turnserver /usr/local/bin/turnserver
+COPY entrypoint-coturn.sh /usr/local/bin/entrypoint-coturn.sh
+
+RUN mkdir -p /etc/coturn /etc/coturn/tls
+COPY turnserver.conf /etc/coturn/turnserver.conf.tmpl
+RUN chmod +x /usr/local/bin/entrypoint-coturn.sh
+
+# TURN TCP/TLS ports
+EXPOSE 3478 5349
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-coturn.sh"]

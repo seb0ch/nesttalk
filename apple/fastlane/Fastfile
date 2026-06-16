@@ -1,0 +1,92 @@
+# NestTalk v0.4.0 release lanes.
+#
+# This file is consumed by `fastlane <lane>` from the apple/ directory.
+# Two lanes:
+#
+#   beta_ios   — gym(scheme: NestTalk-iOS) → pilot upload
+#   beta_macos — gym(scheme: NestTalk-macOS, export_method: developer-id) →
+#                 notarize → stapler
+#
+# Authenticates via App Store Connect API key (no Apple ID password).
+# CI loads the key from:
+#   ENV["APP_STORE_CONNECT_API_KEY_ID"]
+#   ENV["APP_STORE_CONNECT_ISSUER_ID"]
+#   ENV["FASTLANE_APP_STORE_CONNECT_API_KEY_CONTENT"] (full .p8 contents)
+#
+# Local runs need the same env exports OR a fastlane/ASC-API-Key.json
+# (gitignored).
+
+default_platform(:ios)
+
+# ─── helpers ───────────────────────────────────────────────────────
+
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+    key_content: ENV["FASTLANE_APP_STORE_CONNECT_API_KEY_CONTENT"],
+    is_key_content_base64: false,
+    in_house: false
+  )
+end
+
+def regenerate_xcode_project
+  # fastlane runs with cwd = apple/fastlane; the project lives in apple/.
+  Dir.chdir("..") do
+    sh("xcodegen generate")
+    sh("./scripts/restore-package-resolved.sh") if File.exist?("scripts/restore-package-resolved.sh")
+  end
+end
+
+# ─── iOS ───────────────────────────────────────────────────────────
+
+platform :ios do
+  desc "TestFlight beta build for sergey3 / sergey4 + author"
+  lane :beta do
+    regenerate_xcode_project
+    increment_build_number(xcodeproj: "NestTalk.xcodeproj")
+    gym(
+      scheme: "NestTalk-iOS",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build/ios",
+      clean: true,
+      include_bitcode: false
+    )
+    pilot(
+      api_key: asc_api_key,
+      skip_waiting_for_build_processing: true,
+      changelog: ENV["NESTTALK_RELEASE_NOTES"] || "Internal v0.4.0 beta build."
+    )
+  end
+end
+
+# ─── macOS ─────────────────────────────────────────────────────────
+
+platform :mac do
+  desc "Developer-ID signed + notarized DMG for sideload distribution"
+  lane :beta do
+    regenerate_xcode_project
+    increment_build_number(xcodeproj: "NestTalk.xcodeproj")
+    gym(
+      scheme: "NestTalk-macOS",
+      configuration: "Release",
+      export_method: "developer-id",
+      output_directory: "build/macos",
+      clean: true
+    )
+    # Apple's notary service does not accept a raw `.app` bundle —
+    # it requires a notarizable container (zip / pkg / dmg). Wrap
+    # the app in a zip first; downstream you can convert to a dmg
+    # for distribution.
+    sh("cd build/macos && rm -f NestTalk.zip && /usr/bin/ditto -c -k --keepParent NestTalk.app NestTalk.zip")
+    notarize(
+      package: "build/macos/NestTalk.zip",
+      bundle_id: "com.nesttalk.macos",
+      api_key: asc_api_key
+    )
+    # Staple the notarization ticket so the app launches without
+    # network access at first run.
+    sh("xcrun stapler staple build/macos/NestTalk.app")
+  end
+end

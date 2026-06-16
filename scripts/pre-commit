@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# NestTalk v0.4.0 pre-commit hook.
+#
+# Fast checks only — anything that would block a 5-second commit cycle goes
+# in CI, not here. Currently:
+#
+#   * `go vet` on the server module (when server/ files changed) — fast.
+#
+# Post-spike TODO:
+#   * SwiftFormat / SwiftLint on apple/ when apple/ files changed.
+#   * xcodebuild -scheme NestTalkTests unit subset, if fast enough on a warm cache.
+#
+# The cross-language envelope vector gate (`make check-interop`) needs a
+# native framework build and is intentionally NOT run here — call it
+# explicitly before pushing if you touched any crypto code.
+#
+# Install: `make install-hooks` (or symlink scripts/pre-commit yourself).
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+CHANGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+needs_go_vet=0
+while IFS= read -r f; do
+  case "$f" in
+    server/*) needs_go_vet=1 ;;
+  esac
+done <<<"$CHANGED"
+
+if [[ "$needs_go_vet" -eq 1 ]]; then
+  echo "[pre-commit] go vet ./server/..."
+  ( cd server && go vet ./... )
+fi
+
+exit 0

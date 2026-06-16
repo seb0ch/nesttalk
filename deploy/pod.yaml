@@ -1,0 +1,116 @@
+# Podman pod definition template for NestTalk.
+# Render first with:
+#   set -a && . deploy/.env.example && set +a
+#   ./deploy/render-pod.sh
+#
+# Only sing-box (443) is exposed to the host.
+# The Go server (nesttalk-server) listens on 127.0.0.1:8080 inside the pod
+# only - sing-box forwards authenticated REALITY traffic to it via the
+# nesttalk-api direct outbound (with route-rule destination override).
+# coturn (nesttalk-coturn) listens on 127.0.0.1:3478 inside the pod only -
+# sing-box routes the TURN-UUID user to it via the coturn direct outbound.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nesttalk
+spec:
+  containers:
+    - name: nesttalk-server
+      image: localhost/nesttalk-server:latest
+      # No hostPort - only reachable within the pod (via sing-box route)
+      env:
+        - name: DB_PATH
+          value: /data/nesttalk.db
+        - name: NESTTALK_DEBUG
+          value: "${NESTTALK_DEBUG}"
+        - name: LISTEN_ADDR
+          value: "${LISTEN_ADDR}"
+        - name: API_BASE_URL
+          value: "${API_BASE_URL}"
+        - name: TURN_SECRET
+          value: "${TURN_SECRET}"
+        - name: REALITY_SERVER_ADDR
+          value: "${REALITY_SERVER_ADDR}"
+        - name: REALITY_PUBLIC_KEY
+          value: "${REALITY_PUBLIC_KEY}"
+        - name: REALITY_SHORT_ID
+          value: "${REALITY_SHORT_ID}"
+        - name: REALITY_SNI
+          value: "${REALITY_SNI}"
+        - name: REALITY_API_UUID
+          value: "${REALITY_API_UUID}"
+        - name: REALITY_TURN_UUID
+          value: "${REALITY_TURN_UUID}"
+        # APNs / VoIP push (optional). Server starts without these set;
+        # main.go logs "APNs client disabled" and continues. With all
+        # five set, every callsMgr.Create fans out a VoIP push so iOS
+        # CallKit rings the lock screen of a terminated app.
+        - name: NESTTALK_APNS_KEY_P8_PATH
+          value: "/etc/nesttalk/apns-key.p8"
+        - name: NESTTALK_APNS_KEY_ID
+          value: "${NESTTALK_APNS_KEY_ID}"
+        - name: NESTTALK_APNS_TEAM_ID
+          value: "${NESTTALK_APNS_TEAM_ID}"
+        - name: NESTTALK_APNS_TOPIC_VOIP
+          value: "${NESTTALK_APNS_TOPIC_VOIP}"
+        - name: NESTTALK_APNS_ENDPOINT
+          value: "${NESTTALK_APNS_ENDPOINT}"
+      volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: control-socket
+          mountPath: /var/run/nesttalk
+        # APNs .p8 key from the `nesttalk-apns-p8` podman secret (see volumes).
+        # Mounts as /etc/nesttalk/apns-key.p8, read via NESTTALK_APNS_KEY_P8_PATH.
+        - name: apns-key
+          mountPath: /etc/nesttalk
+          readOnly: true
+
+    - name: nesttalk-singbox
+      image: localhost/nesttalk-singbox:latest
+      env:
+        - name: REALITY_API_UUID
+          value: "${REALITY_API_UUID}"
+        - name: REALITY_TURN_UUID
+          value: "${REALITY_TURN_UUID}"
+        - name: REALITY_PRIVATE_KEY
+          value: "${REALITY_PRIVATE_KEY}"
+        - name: REALITY_SHORT_ID
+          value: "${REALITY_SHORT_ID}"
+        - name: REALITY_SNI
+          value: "${REALITY_SNI}"
+        - name: REALITY_DEST
+          value: "${REALITY_DEST}"
+        - name: API_REDIRECT
+          value: "${API_REDIRECT}"
+      ports:
+        - containerPort: 443
+          hostPort: 443
+
+    - name: nesttalk-coturn
+      image: localhost/nesttalk-coturn:latest
+      env:
+        - name: TURN_SECRET
+          value: "${TURN_SECRET}"
+        - name: TURN_REALM
+          value: "${TURN_REALM}"
+      # No hostPort - only reachable within the pod (via sing-box route)
+
+  volumes:
+    - name: data
+      hostPath:
+        path: ${NESTTALK_DATA_DIR}
+        type: DirectoryOrCreate
+    - name: control-socket
+      hostPath:
+        path: ${NESTTALK_DATA_DIR}/run
+        type: DirectoryOrCreate
+    # APNs VoIP .p8 key. The `kind: Secret` doc that render-pod.sh prepends
+    # (built from the podman secret `nesttalk-apns-p8`) materializes this k8s
+    # secret; play kube mounts data key `apns-key.p8` as a file. optional:true
+    # so the pod still starts (push disabled) when no secret is configured.
+    - name: apns-key
+      secret:
+        secretName: nesttalk-apns
+        optional: true

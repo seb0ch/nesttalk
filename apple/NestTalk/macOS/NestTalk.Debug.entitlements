@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	macOS Debug entitlements. The critical bit for Sprint-2-onward:
+	`keychain-access-groups` is what gates kSecUseDataProtectionKeychain
+	on macOS. Without it (and without a Distribution provisioning
+	profile that grants application-identifier), every Keychain
+	read/write returns OSStatus -34018 (errSecMissingEntitlement).
+	$(AppIdentifierPrefix) is filled in by codesign from the team that
+	signed the Debug build, mirroring the iOS Debug entitlements.
+
+	Why the Debug app needs this and the legacy keychain doesn't help:
+	macOS legacy keychain ACLs are tied to the signing identity. Apple
+	Development re-signs the bundle on every Debug build with a fresh
+	ad-hoc-ish certificate, so the previous launch's keychain items
+	become unreadable to the new launch. Result: "every macOS launch
+	needs a fresh invite." Data-protection keychain, in contrast, is
+	bundle-id scoped — survives re-signs.
+
+	No app-sandbox in Debug so dev-only flows (file pickers, debugger
+	attach, etc.) stay frictionless. App-sandbox is only set in
+	Release where the hardened runtime is also active.
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.nesttalk.macos</string>
+	</array>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

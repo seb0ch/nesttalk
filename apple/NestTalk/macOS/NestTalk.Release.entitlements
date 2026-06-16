@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Gates kSecUseDataProtectionKeychain on macOS. The device identity
+	(Ed25519/X25519/ML-KEM) is stored in the data-protection keychain so
+	it survives Developer-ID re-signs (bundle-id scoped, not signing-cert
+	scoped). Without this entitlement every Keychain op returns OSStatus
+	-34018 (errSecMissingEntitlement) → "Couldn't join family: Keychain:
+	OSStatus -34018". Mirrors NestTalk.Debug.entitlements; $(AppIdentifierPrefix)
+	is filled in by codesign from the signing team.
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.nesttalk.macos</string>
+	</array>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!--
+	Required: the bundled Libbox transport runs a command-server that
+	LISTENS on a loopback TCP port (127.0.0.1). Under the macOS App
+	Sandbox, creating any listening socket — even on loopback — needs
+	the network.server entitlement; network.client alone permits only
+	outbound dials, so without this the transport fails to start with
+	"bind: operation not permitted". (Debug has no app-sandbox, which is
+	why this only bit the sandboxed Release build.)
+	-->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+	<key>com.apple.security.cs.allow-jit</key>
+	<false/>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<false/>
+	<!--
+	Required: Libbox.xcframework binaries lack a Team ID signature
+	consistent with our Developer-ID cert. Disable strict library
+	validation so the runtime can load it. The framework itself is
+	bundled inside the app, so this only loosens validation for our
+	own embedded code.
+	-->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>
