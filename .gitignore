@@ -48,3 +48,4 @@ docs/
 
 # Feasibility-spike code — excluded from the public release
 spikes/
+coverage.out

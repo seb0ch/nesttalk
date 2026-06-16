@@ -1,5 +1,9 @@
 # NestTalk
 
+[![Go](https://github.com/seb0ch/nesttalk/actions/workflows/go.yml/badge.svg)](https://github.com/seb0ch/nesttalk/actions/workflows/go.yml)
+[![Coverage Status](https://coveralls.io/repos/github/seb0ch/nesttalk/badge.svg?branch=main)](https://coveralls.io/github/seb0ch/nesttalk?branch=main)
+[![Go Report Card](https://goreportcard.com/badge/github.com/seb0ch/nesttalk/server)](https://goreportcard.com/report/github.com/seb0ch/nesttalk/server)
+
 A private family-first messenger built for synchronous sessions: end-to-end encrypted messages and calls, zero-knowledge server architecture, and camouflaged transport for restricted networks. Native Apple client (iOS / iPadOS / macOS) backed by a Go server.
 
 ## What's inside

@@ -1,0 +1,51 @@
+# Go server CI: static analysis, tests, and Coveralls coverage upload.
+#
+# Scope is the server module (the cross-language interop gate lives there too).
+# The Swift/Apple client and its coverage (slather) are intentionally NOT here
+# yet: the macOS target depends on Libbox.xcframework, which is not committed,
+# so a fresh runner cannot build it. Swift coverage joins once libbox is
+# buildable/cacheable in CI — at that point switch the Coveralls submission to
+# a parallel build (parallel: true + a parallel-finished close-out job).
+name: Go
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.1' # matches go.work / AGENTS.md version baseline
+          cache-dependency-path: |
+            server/go.sum
+            test/go.sum
+
+      - name: Vet (server + test modules)
+        run: make analyze
+
+      - name: Test with coverage (server module)
+        run: |
+          cd server
+          go test -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: Crypto interop vector gate
+        run: make check-interop
+
+      - name: Upload coverage to Coveralls
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: server/coverage.out
+          # The COVERALLS_REPO_TOKEN repo secret (from the repo's page on
+          # coveralls.io) authenticates the upload. The action feeds this as
+          # goveralls' repo token. For a public repo the default GitHub token
+          # would also work; the explicit secret covers the private case too.
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
